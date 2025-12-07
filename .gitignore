@@ -16,5 +16,8 @@ build/
 *.log
 *.cache
 
-# Go debug binary created by VS Code
+## Go debug binary created by VS Code
 __debug_bin.exe
+
+## DB
+dev.db

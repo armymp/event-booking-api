@@ -22,7 +22,7 @@ var AppConfig Config
 func LoadConfig() {
 	env := os.Getenv("APP_ENV")
 	if env == "" {
-		env = "dev" // default
+		env = "development" // default
 	}
 
 	// Load the config file based on env
