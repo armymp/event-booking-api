@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/armymp/event-booking-api/models"
 	"github.com/gin-gonic/gin"
@@ -19,7 +18,7 @@ func getEvents(context *gin.Context) {
 		slog.Error("Failed to retrieve events from database",
 			"http_method", context.Request.Method,
 			"request_path", context.Request.URL.Path,
-			"error_details", err.Error(),
+			"error_details", err,
 		)
 
 		context.JSON(http.StatusInternalServerError, gin.H{
@@ -32,19 +31,8 @@ func getEvents(context *gin.Context) {
 }
 
 func getEvent(context *gin.Context) {
-	eventIDStr := context.Param("id")
-	eventID, err := strconv.ParseInt(eventIDStr, 10, 64)
-	if err != nil {
-		slog.Error("Failed to parse event ID from URL parameter",
-			"http_method", context.Request.Method,
-			"request_path", context.Request.URL.Path,
-			"event_id_string", eventIDStr,
-			"error_details", err.Error(),
-		)
-
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not parse event id. Ensure it is a number.",
-		})
+	eventID, ok := parseEventID(context)
+	if !ok {
 		return
 	}
 
@@ -121,23 +109,12 @@ func createEvent(context *gin.Context) {
 }
 
 func updateEvent(context *gin.Context) {
-	eventIDStr := context.Param("id")
-	eventID, err := strconv.ParseInt(eventIDStr, 10, 64)
-	if err != nil {
-		slog.Error("Failed to parse event ID from URL parameter",
-			"http_method", context.Request.Method,
-			"request_path", context.Request.URL.Path,
-			"event_id_string", eventIDStr,
-			"error_details", err.Error(),
-		)
-
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not parse event id. Ensure it is a number.",
-		})
+	eventID, ok := parseEventID(context)
+	if !ok {
 		return
 	}
 
-	_, err = models.GetEventByID(eventID)
+	_, err := models.GetEventByID(eventID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			slog.Info("Event ID not found in database",
@@ -191,19 +168,8 @@ func updateEvent(context *gin.Context) {
 }
 
 func deleteEvent(context *gin.Context) {
-	eventIDStr := context.Param("id")
-	eventID, err := strconv.ParseInt(eventIDStr, 10, 64)
-	if err != nil {
-		slog.Error("Failed to parse event ID from URL parameter",
-			"http_method", context.Request.Method,
-			"request_path", context.Request.URL.Path,
-			"event_id_string", eventIDStr,
-			"error_details", err.Error(),
-		)
-
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not parse event id. Ensure it is a number.",
-		})
+	eventID, ok := parseEventID(context)
+	if !ok {
 		return
 	}
 
