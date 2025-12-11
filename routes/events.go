@@ -3,7 +3,6 @@ package routes
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -16,7 +15,15 @@ func getEvents(context *gin.Context) {
 	events, err := models.GetAllEvents()
 
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not retrieve events. Try again later."})
+		slog.Error("Failed to retrieve events from database",
+			"http_method", context.Request.Method,
+			"request_path", context.Request.URL.Path,
+			"error_details", err.Error(),
+		)
+
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not retrieve events. Try again later.",
+		})
 		return
 	}
 
@@ -68,20 +75,43 @@ func createEvent(context *gin.Context) {
 	err := context.ShouldBindJSON(&event)
 
 	if err != nil {
-		fmt.Println("BIND ERROR:", err)
-		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse request data"})
+		slog.Warn("Failed to bind requestJSON to event struct",
+			"http_method", context.Request.Method,
+			"request_path", context.Request.URL.Path,
+			"error_details", err.Error(),
+		)
+
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "Could not parse event data. Ensure all required fields are included.",
+		})
 		return
 	}
 
+	// TODO: Remove hardcoded ID and UserID
 	event.ID = 1
 	event.UserID = 1000
 
 	err = event.Save()
-
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "Could not create event. Try again later."})
+		slog.Error("Database error while saving event",
+			"event_name", event.Name,
+			"event_location", event.Location,
+			"error_details", err.Error(),
+		)
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not create event. Try again later.",
+		})
 		return
 	}
 
-	context.JSON(http.StatusCreated, gin.H{"message": "Event created!", "event": event})
+	slog.Info("Event created successfully",
+		"event_id", event.ID,
+		"event_name", event.Name,
+		"user_id", event.UserID,
+	)
+
+	context.JSON(http.StatusCreated, gin.H{
+		"message": "Event created!",
+		"event":   event,
+	})
 }
