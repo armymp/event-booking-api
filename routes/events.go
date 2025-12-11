@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"database/sql"
-	"errors"
 	"log/slog"
 	"net/http"
 
@@ -36,27 +34,8 @@ func getEvent(context *gin.Context) {
 		return
 	}
 
-	event, err := models.GetEventByID(eventID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			slog.Info("Event ID not found in database",
-				"event_id", eventID,
-				"request_path", context.Request.URL.Path)
-
-			context.JSON(http.StatusNotFound, gin.H{
-				"message": "Could not find event with provided event id",
-			})
-			return
-		}
-
-		slog.Error("Database error while retrieving event ID",
-			"event_id", eventID,
-			"error_details", err.Error(),
-			"http_method", context.Request.Method)
-
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": "An internal server error occurred.",
-		})
+	event, ok := getEventOr404(context, eventID)
+	if !ok {
 		return
 	}
 
@@ -114,33 +93,14 @@ func updateEvent(context *gin.Context) {
 		return
 	}
 
-	_, err := models.GetEventByID(eventID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			slog.Info("Event ID not found in database",
-				"event_id", eventID,
-				"request_path", context.Request.URL.Path)
-
-			context.JSON(http.StatusNotFound, gin.H{
-				"message": "Could not find event with provided event id",
-			})
-			return
-		}
-
-		slog.Error("Database error while retrieving event ID",
-			"event_id", eventID,
-			"error_details", err.Error(),
-			"http_method", context.Request.Method)
-
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": "An internal server error occurred.",
-		})
+	_, ok = getEventOr404(context, eventID)
+	if !ok {
 		return
 	}
 
 	var updatedEvent models.Event
 
-	err = context.ShouldBindJSON(&updatedEvent)
+	err := context.ShouldBindJSON(&updatedEvent)
 	if err != nil {
 		slog.Warn("Failed to bind requestJSON to event struct",
 			"http_method", context.Request.Method,
@@ -169,38 +129,14 @@ func updateEvent(context *gin.Context) {
 
 func deleteEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
-	e, err := models.GetEventByID(eventID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			slog.Info("Event ID not found in database",
-				"event_id", eventID,
-				"request_path", context.Request.URL.Path)
+	event, ok := getEventOr404(context, eventID)
+	if !ok { return }
 
-			context.JSON(http.StatusNotFound, gin.H{
-				"message": "Could not find event with provided event id",
-			})
-			return
-		}
-
-		slog.Error("Database error while retrieving event ID",
-			"event_id", eventID,
-			"error_details", err.Error(),
-			"http_method", context.Request.Method)
-
+	if err := event.Delete(); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": "An internal server error occurred.",
-		})
-		return
-	}
-
-	err = e.Delete()
-	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Could not delete the event.",
+			"message": "Could not delete event.",
 		})
 		return
 	}
