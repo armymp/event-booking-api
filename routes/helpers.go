@@ -54,3 +54,19 @@ func getEventOr404(context *gin.Context, id int64) (*models.Event, bool) {
 	}
 	return event, true
 }
+
+// Bind JSON with logging
+func bindJSON[T any](context *gin.Context, obj *T) bool {
+	if err := context.ShouldBindJSON(obj); err != nil {
+		slog.Warn("Failed to bind JSON",
+			"http_method", context.Request.Method,
+			"path", context.Request.URL.Path,
+			"error", err,
+		)
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "Invalid request body.",
+		})
+		return false
+	}
+	return true
+}

@@ -30,31 +30,17 @@ func getEvents(context *gin.Context) {
 
 func getEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	event, ok := getEventOr404(context, eventID)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	context.JSON(http.StatusOK, event)
 }
 
 func createEvent(context *gin.Context) {
 	var event models.Event
-	err := context.ShouldBindJSON(&event)
-	if err != nil {
-		slog.Warn("Failed to bind requestJSON to event struct",
-			"http_method", context.Request.Method,
-			"request_path", context.Request.URL.Path,
-			"error_details", err.Error(),
-		)
-
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not parse event data. Ensure all required fields are included.",
-		})
+	if !bindJSON(context, &event) {
 		return
 	}
 
@@ -62,24 +48,13 @@ func createEvent(context *gin.Context) {
 	event.ID = 1
 	event.UserID = 1000
 
-	err = event.Save()
-	if err != nil {
-		slog.Error("Database error while saving event",
-			"event_name", event.Name,
-			"event_location", event.Location,
-			"error_details", err.Error(),
-		)
+	if err := event.Save(); err != nil {
+		slog.Error("Failed to save event", "error", err)
 		context.JSON(http.StatusInternalServerError, gin.H{
-			"message": "Could not create event. Try again later.",
+			"message": "Could not create event.",
 		})
 		return
 	}
-
-	slog.Info("Event created successfully",
-		"event_id", event.ID,
-		"event_name", event.Name,
-		"user_id", event.UserID,
-	)
 
 	context.JSON(http.StatusCreated, gin.H{
 		"message": "Event created!",
@@ -89,34 +64,19 @@ func createEvent(context *gin.Context) {
 
 func updateEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	_, ok = getEventOr404(context, eventID)
-	if !ok {
-		return
-	}
+	if !ok { return }
 
 	var updatedEvent models.Event
-
-	err := context.ShouldBindJSON(&updatedEvent)
-	if err != nil {
-		slog.Warn("Failed to bind requestJSON to event struct",
-			"http_method", context.Request.Method,
-			"request_path", context.Request.URL.Path,
-			"error_details", err.Error(),
-		)
-
-		context.JSON(http.StatusBadRequest, gin.H{
-			"message": "Could not parse event data. Ensure all required fields are included.",
-		})
+	if !bindJSON(context, &updatedEvent) {
 		return
 	}
 
 	updatedEvent.ID = eventID
-	err = updatedEvent.Update()
-	if err != nil {
+
+	if err := updatedEvent.Update(); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Could not update event.",
 		})
