@@ -42,7 +42,9 @@ func getEvent(context *gin.Context) {
 			"error_details", err.Error(),
 		)
 
-		context.JSON(http.StatusBadRequest, gin.H{"message": "Could not parse event id. Ensure it is a number."})
+		context.JSON(http.StatusBadRequest, gin.H{
+			"message": "Could not parse event id. Ensure it is a number.",
+		})
 		return
 	}
 
@@ -54,7 +56,9 @@ func getEvent(context *gin.Context) {
 				"event_id", eventID,
 				"request_path", context.Request.URL.Path)
 
-			context.JSON(http.StatusNotFound, gin.H{"message": "Could not find event with provided event id"})
+			context.JSON(http.StatusNotFound, gin.H{
+				"message": "Could not find event with provided event id",
+			})
 			return
 		}
 
@@ -63,7 +67,9 @@ func getEvent(context *gin.Context) {
 			"error_details", err.Error(),
 			"http_method", context.Request.Method)
 
-		context.JSON(http.StatusInternalServerError, gin.H{"message": "An internal server error occurred."})
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "An internal server error occurred.",
+		})
 		return
 	}
 
