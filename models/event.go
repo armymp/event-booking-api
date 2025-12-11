@@ -1,6 +1,8 @@
 package models
 
 import (
+	"database/sql"
+	"log/slog"
 	"time"
 
 	"github.com/armymp/event-booking-api/db"
@@ -23,6 +25,7 @@ func (e *Event) Save() error {
 
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
+		slog.Error("Failed to prepare INSERT statement", "error", err)
 		return err
 	}
 
@@ -30,13 +33,18 @@ func (e *Event) Save() error {
 
 	result, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.UserID)
 	if err != nil {
+		slog.Error("Failed to execute INSERT", "event", e, "error", err)
 		return err
 	}
 	
 	id, err := result.LastInsertId()
-	e.ID = id
+	if err != nil {
+		slog.Error("Failed to get LastInsertId", "error", err)
+		return err
+	}
 
-	return err
+	e.ID = id
+	return nil
 }
 
 func GetAllEvents() ([]Event, error) {
@@ -44,6 +52,7 @@ func GetAllEvents() ([]Event, error) {
 
 	rows, err := db.DB.Query(query)
 	if err != nil {
+		slog.Error("SELECT query failed", "error", err)
 		return nil, err
 	}
 
@@ -52,14 +61,19 @@ func GetAllEvents() ([]Event, error) {
 	var events []Event
 
 	for rows.Next() {
-		var event Event
-		err := rows.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
-
+		var e Event
+		err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Location, &e.DateTime, &e.UserID)
 		if err != nil {
+			slog.Error("Row scan failed", "error", err)
 			return nil, err
 		}
 		
-		events = append(events, event)
+		events = append(events, e)
+	}
+
+	if err := rows.Err(); err != nil {
+		slog.Error("Row iteration error", "error", err)
+		return nil, err
 	}
 
 	return events, nil
@@ -68,17 +82,23 @@ func GetAllEvents() ([]Event, error) {
 func GetEventByID(id int64) (*Event, error) {
 	query := "SELECT * FROM events WHERE id = ?"
 	row := db.DB.QueryRow(query, id)
-	var event Event
 
-	err := row.Scan(&event.ID, &event.Name, &event.Description, &event.Location, &event.DateTime, &event.UserID)
+	var e Event
+
+	err := row.Scan(&e.ID, &e.Name, &e.Description, &e.Location, &e.DateTime, &e.UserID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			slog.Info("Event not found", "event_id", id)
+		} else {
+			slog.Error("QueryRow failed", "event_id", id, "error", err)
+		}
 		return nil, err
 	}
 
-	return &event, nil
+	return &e, nil
 }
 
-func (event Event) Update() error {
+func (e Event) Update() error {
 	query := `
 	UPDATE events
 	SET name = ?, description = ?, location = ?, dateTime = ?
@@ -87,11 +107,26 @@ func (event Event) Update() error {
 
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
+		slog.Error("Failed to prepare UPDATE", "error", err)
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(e.Name, e.Description, e.Location, e.DateTime, e.ID)
+	if err != nil {
+		slog.Error("Failed to execute UPDATE", "event", e, "error", err)
 		return err
 	}
 
-	defer stmt.Close()
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		slog.Error("Failed to check RowsAffected", "error", err)
+		return err
+	}
 
-	_, err = stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.ID)
-	return err
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }
