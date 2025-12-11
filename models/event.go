@@ -130,3 +130,32 @@ func (e Event) Update() error {
 
 	return nil
 }
+
+func (e Event) Delete() error {
+	query := "DELETE FROM events WHERE id = ?"
+
+	stmt, err := db.DB.Prepare(query)
+	if err != nil {
+		slog.Error("Failed to prepare DELETE", "error", err)
+		return err
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(e.ID)
+	if err != nil {
+		slog.Error("Failed to execute DELETE", "event", e, "error", err)
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		slog.Error("Failed to check RowsAffected", "error", err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
