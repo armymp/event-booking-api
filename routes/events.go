@@ -13,7 +13,6 @@ import (
 
 func getEvents(context *gin.Context) {
 	events, err := models.GetAllEvents()
-
 	if err != nil {
 		slog.Error("Failed to retrieve events from database",
 			"http_method", context.Request.Method,
@@ -33,7 +32,6 @@ func getEvents(context *gin.Context) {
 func getEvent(context *gin.Context) {
 	eventIDStr := context.Param("id")
 	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
-
 	if err != nil {
 		slog.Error("Failed to parse event ID from URL parameter",
 			"http_method", context.Request.Method,
@@ -49,7 +47,6 @@ func getEvent(context *gin.Context) {
 	}
 
 	event, err := models.GetEventByID(eventID)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			slog.Info("Event ID not found in database",
@@ -79,7 +76,6 @@ func getEvent(context *gin.Context) {
 func createEvent(context *gin.Context) {
 	var event models.Event
 	err := context.ShouldBindJSON(&event)
-
 	if err != nil {
 		slog.Warn("Failed to bind requestJSON to event struct",
 			"http_method", context.Request.Method,
@@ -125,7 +121,6 @@ func createEvent(context *gin.Context) {
 func updateEvent(context *gin.Context) {
 	eventIDStr := context.Param("id")
 	eventID, err := strconv.ParseInt(context.Param("id"), 10, 64)
-
 	if err != nil {
 		slog.Error("Failed to parse event ID from URL parameter",
 			"http_method", context.Request.Method,
