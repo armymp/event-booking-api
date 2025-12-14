@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Request Handlers
+// Events Request Handlers
 
 func getEvents(context *gin.Context) {
 	events, err := models.GetAllEvents()
