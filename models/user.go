@@ -4,12 +4,13 @@ import (
 	"log/slog"
 
 	"github.com/armymp/event-booking-api/db"
+	"github.com/armymp/event-booking-api/utils"
 )
 
 type User struct {
-	ID       int64
-	EMAIL    string `binding:"required"`
-	PASSWORD string `binding:"required"`
+	ID       int64  `json:"id"`
+	Email    string `json:"email"`
+	Password string `json:"-"` // '-' ensures password is never returned in responses
 }
 
 func (u *User) Save() error {
@@ -17,21 +18,27 @@ func (u *User) Save() error {
 
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
-		slog.Error("Failed to prepare INSERT statement", "error", err)
+		slog.Error("User.Save: failed to prepare INSERT statement", "error", err)
 		return err
 	}
 
 	defer stmt.Close()
 
-	result, err := stmt.Exec(u.EMAIL, u.PASSWORD)
+	hashedPassword, err := utils.HashPassword(u.Password)
 	if err != nil {
-		slog.Error("failed to execute INSERT statement", "error", err)
+		slog.Error("User.Save: failed to hash password", "error", err)
+		return err
+	}
+
+	result, err := stmt.Exec(u.Email, hashedPassword)
+	if err != nil {
+		slog.Error("User.Save: failed to execute INSERT statement", "error", err)
 		return err
 	}
 
 	userID, err := result.LastInsertId()
 	if err != nil {
-		slog.Error("Failed to get LastInsertId", "error", err)
+		slog.Error("User.Save: failed to get last insert id", "error", err)
 		return err
 	}
 

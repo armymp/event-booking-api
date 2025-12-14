@@ -11,7 +11,7 @@ import (
 // logic for storing and fetching data
 
 type Event struct {
-	ID          int64       `json:"id"`
+	ID          int64     `json:"id"`
 	Name        string    `json:"name" binding:"required"`
 	Description string    `json:"description" binding:"required"`
 	Location    string    `json:"location" binding:"required"`
@@ -36,7 +36,7 @@ func (e *Event) Save() error {
 		slog.Error("Failed to execute INSERT", "event", e, "error", err)
 		return err
 	}
-	
+
 	id, err := result.LastInsertId()
 	if err != nil {
 		slog.Error("Failed to get LastInsertId", "error", err)
@@ -67,7 +67,7 @@ func GetAllEvents() ([]Event, error) {
 			slog.Error("Row scan failed", "error", err)
 			return nil, err
 		}
-		
+
 		events = append(events, e)
 	}
 

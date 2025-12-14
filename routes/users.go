@@ -11,10 +11,15 @@ import (
 // Users Request Handlers
 
 func signup(context *gin.Context) {
-	var user models.User
+	var req models.SignupRequest
 
-	if !bindJSON(context, &user) {
+	if !bindJSON(context, &req) {
 		return
+	}
+
+	user := models.User {
+		Email: req.Email,
+		Password: req.Password,
 	}
 
 	if err := user.Save(); err != nil {
@@ -27,6 +32,9 @@ func signup(context *gin.Context) {
 
 	context.JSON(http.StatusCreated, gin.H {
 		"message": "User created!",
-		"user": user,
+		"user": gin.H{
+			"id": user.ID,
+			"email": user.Email,
+		},
 	})
 }
