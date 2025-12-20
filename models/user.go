@@ -1,6 +1,8 @@
 package models
 
 import (
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/armymp/event-booking-api/db"
@@ -44,4 +46,25 @@ func (u *User) Save() error {
 
 	u.ID = userID
 	return err
+}
+
+func (u *User) ValidateCredentials() error {
+	query := "SELECT password FROM users WHERE email = ?"
+	row := db.DB.QueryRow(query, u.Email)
+
+	var hashedPassword string
+	if err := row.Scan(&hashedPassword); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("invalid credentials")
+		}
+		
+		slog.Error("User.ValidateCredentials: query failed", "error", err)
+		return err
+	}
+
+	if !utils.CheckPasssword(hashedPassword, u.Password) {
+		return errors.New("invalid credentials")
+	}
+
+	return nil
 }

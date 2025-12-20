@@ -17,24 +17,53 @@ func signup(context *gin.Context) {
 		return
 	}
 
-	user := models.User {
-		Email: req.Email,
+	user := models.User{
+		Email:    req.Email,
 		Password: req.Password,
 	}
 
 	if err := user.Save(); err != nil {
 		slog.Error("Failed to save user", "error", err)
-		context.JSON(http.StatusInternalServerError, gin.H {
+		context.JSON(http.StatusInternalServerError, gin.H{
 			"message": "Could not create user.",
 		})
 		return
 	}
 
-	context.JSON(http.StatusCreated, gin.H {
+	context.JSON(http.StatusCreated, gin.H{
 		"message": "User created!",
 		"user": gin.H{
-			"id": user.ID,
+			"id":    user.ID,
 			"email": user.Email,
 		},
+	})
+}
+
+func login(context *gin.Context) {
+	var req models.LoginRequest
+
+	if !bindJSON(context, &req) {
+		return
+	}
+
+	user := models.User{
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	if err := user.ValidateCredentials(); err != nil {
+		slog.Warn("Login failed",
+			"email", req.Email,
+			"ip", context.ClientIP(),
+		)
+
+		context.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Invalid email or password.",
+		})
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H{
+		"message": "Login successful!",
 	})
 }
