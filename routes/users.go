@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/armymp/event-booking-api/models"
+	"github.com/armymp/event-booking-api/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -63,7 +64,17 @@ func login(context *gin.Context) {
 		return
 	}
 
+	token, err := utils.GenerateToken(user.Email, user.ID)
+	if err != nil {
+		slog.Error("Failed to generate token", "error", err)
+		context.JSON(http.StatusInternalServerError, gin.H{
+			"message": "Could not generate authentication token",
+		})
+		return
+	}
+
 	context.JSON(http.StatusOK, gin.H{
 		"message": "Login successful!",
+		"token":   token,
 	})
 }

@@ -2,9 +2,12 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -15,30 +18,42 @@ type Config struct {
 	Database struct {
 		Name string
 	}
+	JWT struct {
+		Secret string
+	}
 }
 
 var AppConfig Config
 
 func LoadConfig() {
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		env = "development" // default
-	}
+    if err := godotenv.Load(); err != nil {
+        log.Println(".env file not found, relying on environment variables")
+    }
 
-	// Load the config file based on env
-	viper.SetConfigName("config." + env)
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".") // look in current folder
+    viper.SetDefault("APP_ENV", "development")
+    env := os.Getenv("APP_ENV")
+    if env == "" {
+        env = "development"
+    }
 
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(fmt.Errorf("config file error: %w", err))
-	}
+    viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+    viper.AutomaticEnv()
 
-	err = viper.Unmarshal(&AppConfig)
-	if err != nil {
-		panic(fmt.Errorf("config unmarshal error: %w", err))
-	}
+    viper.BindEnv("JWT.Secret", "JWT_SECRET")
+    viper.BindEnv("Database.Name", "DB_NAME")
 
-	fmt.Println("Loaded environment config:", env)
+    viper.SetConfigName("config." + env)
+    viper.SetConfigType("yaml")
+    viper.AddConfigPath(".")
+    _ = viper.MergeInConfig() // ignore missing YAML
+
+    if err := viper.Unmarshal(&AppConfig); err != nil {
+        panic(fmt.Errorf("config unmarshal error: %w", err))
+    }
+
+    if AppConfig.JWT.Secret == "" {
+        panic("JWT_SECRET is not set")
+    }
+
+    fmt.Println("Loaded environment config:", env)
 }

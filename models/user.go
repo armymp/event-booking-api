@@ -49,11 +49,11 @@ func (u *User) Save() error {
 }
 
 func (u *User) ValidateCredentials() error {
-	query := "SELECT password FROM users WHERE email = ?"
+	query := "SELECT id, password FROM users WHERE email = ?"
 	row := db.DB.QueryRow(query, u.Email)
 
 	var hashedPassword string
-	if err := row.Scan(&hashedPassword); err != nil {
+	if err := row.Scan(&u.ID, &hashedPassword); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("invalid credentials")
 		}
