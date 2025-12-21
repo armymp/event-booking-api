@@ -19,7 +19,7 @@ type AuthClaims struct {
 func GenerateToken(email string, userId int64) (string, error) {
 	secret := config.AppConfig.JWT.Secret
 	if secret == "" {
-		return "", errors.New("JWT secret not configured")
+		return "", errors.New("JWT secret not configured.")
 	}
 	claims := AuthClaims {
 		Email: email,
@@ -34,4 +34,33 @@ func GenerateToken(email string, userId int64) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+func VerifyToken(token string) error{
+	secret := config.AppConfig.JWT.Secret
+	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
+		_, ok := t.Method.(*jwt.SigningMethodHMAC)
+		if !ok {
+			return nil, errors.New("Unexpected signing method.")
+		}
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return errors.New("Could not parse token.")
+	}
+
+	isValidToken := parsedToken.Valid
+	if !isValidToken {
+		return errors.New("Invalid token")
+	}
+
+	// uncomment later when we need to extract email, userId
+	// claims, ok := parsedToken.Claims.(jwt.MapClaims)
+	// if !ok {
+	// 	return errors.New("Invalid token claims.")
+	// }
+	// email := claims["email"].(string)
+	// userId := claims["userId"].(int64)
+
+	return nil
 }

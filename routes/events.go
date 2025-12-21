@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/armymp/event-booking-api/models"
+	"github.com/armymp/event-booking-api/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,15 +31,29 @@ func getEvents(context *gin.Context) {
 
 func getEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	event, ok := getEventOr404(context, eventID)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	context.JSON(http.StatusOK, event)
 }
 
 func createEvent(context *gin.Context) {
+	// extract token (makes function protected so that its only executed if valid token exists)
+	token := context.Request.Header.Get("Authorization")
+	err := utils.VerifyToken(token)
+	if err != nil || token == "" {
+		context.JSON(http.StatusUnauthorized, gin.H{
+			"message": "Not authorized",
+		})
+		return
+	}
+
 	var event models.Event
 	if !bindJSON(context, &event) {
 		return
@@ -46,7 +61,7 @@ func createEvent(context *gin.Context) {
 
 	// TODO: Remove hardcoded ID and UserID
 	event.ID = 1
-	event.UserID = 1000
+	event.UserID = 1
 
 	if err := event.Save(); err != nil {
 		slog.Error("Failed to save event", "error", err)
@@ -64,10 +79,14 @@ func createEvent(context *gin.Context) {
 
 func updateEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	_, ok = getEventOr404(context, eventID)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	var updatedEvent models.Event
 	if !bindJSON(context, &updatedEvent) {
@@ -89,10 +108,14 @@ func updateEvent(context *gin.Context) {
 
 func deleteEvent(context *gin.Context) {
 	eventID, ok := parseEventID(context)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	event, ok := getEventOr404(context, eventID)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	if err := event.Delete(); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{
